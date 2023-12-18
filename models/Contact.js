@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+
 import Joi from "joi";
 
 import { handleSaveError, preUpdate } from "./hooks.js";
@@ -19,6 +20,10 @@ const contactSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: "user",
+    },
   },
   { versionKey: false, timestamps: true }
 );
@@ -30,20 +35,33 @@ contactSchema.pre("findOneAndUpdate", preUpdate);
 contactSchema.post("findOneAndUpdate", handleSaveError);
 
 export const contactAddSchema = Joi.object({
-  name: Joi.string().required(),
-  email: Joi.string().required(),
-  phone: Joi.string().required(),
+  name: Joi.string().min(2).required().messages({
+    "any.required": `"name" must be exist`,
+    "string.base": `"name" must be text`,
+  }),
+  email: Joi.string().email({
+    minDomainSegments: 2,
+    tlds: { allow: ["com", "net"] },
+  }),
+  phone: Joi.number().min(7).messages({
+    "number.base": `"phone" must be number`,
+  }),
   favorite: Joi.boolean(),
 });
 
 export const contactUpdateSchema = Joi.object({
-  name: Joi.string(),
-  email: Joi.string(),
-  phone: Joi.string(),
+  name: Joi.string().min(2).messages({ "string.base": `"name" must be text` }),
+  email: Joi.string().email({
+    minDomainSegments: 2,
+    tlds: { allow: ["com", "net"] },
+  }),
+  phone: Joi.number().min(7).messages({
+    "number.base": `"phone" must be number`,
+  }),
   favorite: Joi.boolean(),
 });
 
-export const contactFavoriteScheme = Joi.object({
+export const contactFavoriteSchema = Joi.object({
   favorite: Joi.boolean().required(),
 });
 

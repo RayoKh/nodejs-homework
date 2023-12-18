@@ -1,47 +1,73 @@
 import Contact from "../models/Contact.js";
 
-import { ctrlWrapper } from "../decorators/index.js";
-
 import { HttpError } from "../helpers/index.js";
 
+import { ctrlWrapper } from "../decorators/index.js";
+
 const getAllContacts = async (req, res) => {
-  const result = await Contact.find({}, "-createdAt -updatedAt");
-  res.json(result);
+  const { _id: owner } = req.user;
+  const { page = 1, limit = 20, ...filterParams } = req.query;
+  const skip = (page - 1) * limit;
+  const filter = { owner, ...filterParams };
+  const result = await Contact.find(filter, "-createdAt -updatedAt", {
+    skip,
+    limit,
+  }).populate("owner", "name email");
+
+  const total = await Contact.countDocuments(filter);
+  res.json({ result, total });
 };
 
 const getById = async (req, res) => {
-  const { contactId } = req.params;
-  const result = await Contact.findById(contactId);
+  const { id } = req.params;
+  const { _id: owner } = req.user;
+  const result = await Contact.findOne({ _id: id, owner });
   if (!result) {
-    throw HttpError(404, `Contact with id=${contactId} not found`);
+    throw HttpError(404, `Contact with id=${id} not found`);
   }
   res.json(result);
 };
 
 const add = async (req, res) => {
-  const result = await Contact.create(req.body);
+  const { _id: owner } = req.user;
+  const result = await Contact.create({ ...req.body, owner });
 
   res.status(201).json(result);
 };
 
 const updateById = async (req, res) => {
-  const { contactId } = req.params;
-  const result = await Contact.findByIdAndUpdate(contactId, req.body);
+  const { id } = req.params;
+  const { _id: owner } = req.user;
+  const result = await Contact.findOneAndUpdate({ _id: id, owner }, req.body);
   if (!result) {
-    throw HttpError(404, `Contact with id=${contactId} not found`);
+    throw HttpError(404, `Contact with id=${id} not found`);
   }
+
   res.json(result);
 };
 
-const deleteById = async (req, res) => {
-  const { contactId } = req.params;
-  const result = await Contact.findByIdAndDelete(contactId);
-  if (!result) {
-    throw HttpError(404, `Contact with id=${contactId} not found`);
+const updateStatusContact = async (req, res) => {
+  const { id } = req.params;
+  const { _id: owner } = req.user;
+  const { favorite } = req.body;
+  if (favorite === undefined) {
+    throw HttpError(400, "missing field favorite");
   }
-  res.json({
-    message: "contact deleted",
-  });
+  const result = await Contact.findOneAndUpdate({ _id: id, owner }, req.body);
+  if (!result) {
+    throw HttpError(404, "Not found");
+  }
+
+  res.status(200).json(result);
+};
+
+const deleteById = async (req, res) => {
+  const { id } = req.params;
+  const result = await Contact.findByIdAndDelete(id);
+  if (!result) {
+    throw HttpError(404, `Contact with id=${id} not found`);
+  }
+  res.json({ message: "Contact deleted" });
 };
 
 export default {
@@ -49,5 +75,6 @@ export default {
   getById: ctrlWrapper(getById),
   add: ctrlWrapper(add),
   updateById: ctrlWrapper(updateById),
+  updateStatusContact: ctrlWrapper(updateStatusContact),
   deleteById: ctrlWrapper(deleteById),
 };
