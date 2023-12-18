@@ -4,6 +4,7 @@ import {
   authenticate,
   isEmptyBody,
   isValidId,
+  upload,
 } from "../../middlewares/index.js";
 
 import { validateBody } from "../../decorators/index.js";
@@ -11,6 +12,7 @@ import {
   updSubscriptionSchema,
   userSigninSchema,
   userSignupSchema,
+  userEmailSchema,
 } from "../../models/User.js";
 import authController from "../../controllers/auth-controller.js";
 
@@ -30,6 +32,15 @@ authRouter.post(
   authController.signin
 );
 
+authRouter.get("/verify/:verificationToken", authController.verify);
+
+authRouter.post(
+  "/verify",
+  isEmptyBody,
+  validateBody(userEmailSchema),
+  authController.resendVerify
+);
+
 authRouter.get("/current", authenticate, authController.getCurrent);
 
 authRouter.post("/logout", authenticate, authController.signout);
@@ -42,6 +53,13 @@ authRouter.patch(
   validateBody(updSubscriptionSchema),
 
   authController.updateSubscription
+);
+
+authRouter.patch(
+  "/avatars",
+  authenticate,
+  upload.single("avatar"),
+  authController.updateAvatar
 );
 
 export default authRouter;
