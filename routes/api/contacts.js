@@ -1,12 +1,10 @@
-const express = require("express");
+import express from "express";
 
-const router = express.Router();
+import contactsController from "../../controllers/contacts-controller.js";
 
 import { isEmptyBody, isValidId } from "../../middlewares/index.js";
 
-router.get("/:contactId", async (req, res, next) => {
-  res.json({ message: "template message" });
-});
+import { validateBody } from "../../decorators/index.js";
 
 import {
   contactAddSchema,
@@ -14,9 +12,7 @@ import {
   contactFavoriteScheme,
 } from "../../models/Contact.js";
 
-router.delete("/:contactId", async (req, res, next) => {
-  res.json({ message: "template message" });
-});
+const router = express.Router();
 
 router.get("/", contactsController.getAllContacts);
 
@@ -47,4 +43,4 @@ router.patch(
 
 router.delete("/:contactId", isValidId, contactsController.deleteById);
 
-module.exports = router;
+export default router;
