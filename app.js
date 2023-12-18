@@ -1,10 +1,13 @@
-const express = require('express')
-const logger = require('morgan')
-const cors = require('cors')
+import express from "express";
+import logger from "morgan";
+import cors from "cors";
+import dotenv from "dotenv";
 
 const contactsRouter = require('./routes/api/contacts')
 
-const app = express()
+dotenv.config();
+
+const app = express();
 
 const formatsLogger = app.get('env') === 'development' ? 'dev' : 'short'
 
