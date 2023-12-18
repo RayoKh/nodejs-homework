@@ -1,5 +1,9 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import gravatar from "gravatar";
+import path from "path";
+import fs from "fs/promises";
+import Jimp from "jimp";
 
 import User from "../models/User.js";
 
@@ -9,6 +13,8 @@ import { HttpError } from "../helpers/index.js";
 
 const { JWT_SECRET } = process.env;
 
+const avatarPath = path.resolve("public", "avatars");
+
 const signup = async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
@@ -17,12 +23,18 @@ const signup = async (req, res) => {
   }
 
   const hashPassword = await bcrypt.hash(password, 10);
+  const avatarURL = gravatar.url(email);
 
-  const newUser = await User.create({ ...req.body, password: hashPassword });
+  const newUser = await User.create({
+    ...req.body,
+    password: hashPassword,
+    avatarURL,
+  });
 
   res.status(201).json({
     user: {
       email: newUser.email,
+      avatar: avatarURL,
       subscription: newUser.subscription || "starter",
     },
   });
@@ -67,11 +79,35 @@ const signout = async (req, res) => {
 };
 
 const updateSubscription = async (req, res) => {
-  const { id } = req.params;
-  const { email, subscription } = req.user;
-  const result = await User.findByIdAndUpdate(id, req.user);
+  const { _id } = req.user;
+  const { subscription } = req.body;
+  const result = await User.findByIdAndUpdate(
+    _id,
+    { subscription },
+    { new: true }
+  );
+  res.json({ result });
+};
 
-  res.json({ user: { email, subscription: req.user.subscription } });
+const updateAvatar = async (req, res) => {
+  const { _id } = req.user;
+  const { path: oldPath, filename } = req.file;
+
+  async function changeImgSize() {
+    const image = await Jimp.read(filename);
+
+    image.resize(250, 250);
+  }
+
+  const newPath = path.join(avatarPath, filename);
+  await fs.rename(oldPath, newPath);
+
+  const avatarURL = path.join("avatars", filename);
+  await User.findByIdAndUpdate(_id, { avatarURL });
+
+  res.json({
+    avatarURL,
+  });
 };
 
 export default {
@@ -80,4 +116,5 @@ export default {
   getCurrent: ctrlWrapper(getCurrent),
   signout: ctrlWrapper(signout),
   updateSubscription: ctrlWrapper(updateSubscription),
+  updateAvatar: ctrlWrapper(updateAvatar),
 };
